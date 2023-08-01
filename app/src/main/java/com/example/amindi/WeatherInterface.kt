@@ -1,5 +1,6 @@
 package com.example.amindi
 
+import com.example.amindi.models.WeatherResponse
 import retrofit2.Call
 import retrofit2.http.GET
 import retrofit2.http.Query

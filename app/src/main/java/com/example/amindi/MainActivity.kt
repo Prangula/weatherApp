@@ -8,7 +8,6 @@ import android.content.Context
 import android.content.Intent
 import android.location.Location
 import android.location.LocationManager
-import android.location.LocationRequest
 import android.net.Uri
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
@@ -18,6 +17,7 @@ import android.view.Menu
 import android.view.MenuItem
 import android.widget.Toast
 import androidx.core.content.ContextCompat
+import com.example.amindi.models.WeatherResponse
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationResult
@@ -37,7 +37,6 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var mFusedLocationClient: FusedLocationProviderClient
     private lateinit var dialog:Dialog
-    private lateinit var calendar:Calendar
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -153,7 +152,7 @@ class MainActivity : AppCompatActivity() {
                if(response!!.isSuccessful){
 
                    hideDialog()
-                   val weatherList:WeatherResponse = response.body()!!
+                   val weatherList: WeatherResponse = response.body()!!
                    setUpUi(weatherList)
 
                }
@@ -171,7 +170,7 @@ class MainActivity : AppCompatActivity() {
 
     }
 
-    private fun setUpUi(weatherList:WeatherResponse){
+    private fun setUpUi(weatherList: WeatherResponse){
 
         for(i in weatherList.weather.indices){
 

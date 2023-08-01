@@ -1,4 +1,4 @@
-package com.example.amindi
+package com.example.amindi.models
 
 data class WeatherResponse(
     val base: String,
