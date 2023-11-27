@@ -13,11 +13,18 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.Looper
 import android.provider.Settings
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.Toast
+import androidx.core.app.ActivityCompat.recreate
 import androidx.core.content.ContextCompat
+import androidx.core.content.ContextCompat.getSystemService
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
+import com.example.amindi.api.WeatherApi
 import com.example.amindi.models.WeatherResponse
+import com.example.amindi.utils.Constants
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationResult
@@ -28,6 +35,10 @@ import com.karumi.dexter.PermissionToken
 import com.karumi.dexter.listener.PermissionRequest
 import com.karumi.dexter.listener.multi.MultiplePermissionsListener
 import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import retrofit2.*
 import retrofit2.converter.gson.GsonConverterFactory
 import java.text.SimpleDateFormat
@@ -37,18 +48,66 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var mFusedLocationClient: FusedLocationProviderClient
     private lateinit var dialog:Dialog
+    private lateinit var viewModel: WeatherViewModel
+    val TAG = "Error"
+
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+
+
+        val repository = Repository()
+        val viewModelProviderFactory = ViewModelProviderFactory(repository)
+        viewModel = ViewModelProvider(this,viewModelProviderFactory).get(WeatherViewModel::class.java)
+
+
+        viewModel.getWeather.observe(this, androidx.lifecycle.Observer {response->
+
+            when(response){
+
+                is Resource.Success->{
+
+                    hideDialog()
+                    response.data?.let { weatherResponse ->
+
+                        setUpUi(weatherResponse)
+                    }
+
+
+
+                }
+
+                is Resource.Error->{
+                    hideDialog()
+                    response.message!!.let {message->
+
+                        Log.e(TAG,"Error, $message")
+
+                    }
+
+
+                }
+
+                is Resource.Loading->{
+
+                    showDialog()
+                }
+
+            }
+
+
+
+
+        })
+
+
+
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
         setSupportActionBar(toolbar)
-
-
-
 
 
         if(!isLocationEnabled()){
@@ -104,9 +163,9 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("MissingPermission")
     private fun requestLocationData(){
 
-        val locationRequest = com.google.android.gms.location.LocationRequest()
-        locationRequest.priority =
-            com.google.android.gms.location.LocationRequest.PRIORITY_HIGH_ACCURACY
+      val locationRequest = com.google.android.gms.location.LocationRequest()
+        locationRequest.priority = com.google.android.gms.location.LocationRequest.PRIORITY_HIGH_ACCURACY
+
         mFusedLocationClient.requestLocationUpdates(
             locationRequest,locationCallBack, Looper.myLooper()
         )
@@ -121,54 +180,17 @@ class MainActivity : AppCompatActivity() {
             val lastLocation:Location = locationResult.lastLocation!!
             val latitude = lastLocation.latitude
             val longitude = lastLocation.longitude
-            getLocationWeatherDetails(latitude,longitude)
+          viewModel.getWeather(latitude,longitude)
+
 
         }
 
 
-    }
-
-    private fun getLocationWeatherDetails(latitude:Double,longitude:Double){
-
-        val retrofit: Retrofit = Retrofit.Builder()
-            .baseUrl(Constants.BASE_URL)
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-
-        val service:WeatherInterface =
-            retrofit.create<WeatherInterface>(WeatherInterface::class.java)
-
-        val call: Call<WeatherResponse> = service.getWeather(
-
-            latitude,longitude,Constants.APP_ID,Constants.METRIC_UNIT
-        )
-
-        showDialog()
-        call.enqueue(object:Callback<WeatherResponse>{
-            override fun onResponse(
-                call: Call<WeatherResponse>,
-                response: Response<WeatherResponse>
-            ) {
-               if(response!!.isSuccessful){
-
-                   hideDialog()
-                   val weatherList: WeatherResponse = response.body()!!
-                   setUpUi(weatherList)
-
-               }
-            }
-
-            override fun onFailure(call: Call<WeatherResponse>, t: Throwable) {
-                Toast.makeText(this@MainActivity,"Error",Toast.LENGTH_LONG)
-                    .show()
-                hideDialog()
-            }
-
-
-        })
 
 
     }
+
+
 
     private fun setUpUi(weatherList: WeatherResponse){
 
